@@ -25,8 +25,8 @@
 #define _Adafruit_SSD1306_H_
 
 // ONE of the following three lines must be #defined:
-//#define SSD1306_128_64 ///< DEPRECTAED: old way to specify 128x64 screen
-#define SSD1306_128_32   ///< DEPRECATED: old way to specify 128x32 screen
+#define SSD1306_128_64 ///< DEPRECTAED: old way to specify 128x64 screen
+//#define SSD1306_128_32   ///< DEPRECATED: old way to specify 128x32 screen
 //#define SSD1306_96_16  ///< DEPRECATED: old way to specify 96x16 screen
 // This establishes the screen dimensions in old Adafruit_SSD1306 sketches
 // (NEW CODE SHOULD IGNORE THIS, USE THE CONSTRUCTORS THAT ACCEPT WIDTH
@@ -94,6 +94,9 @@
 #define SSD1306_ACTIVATE_SCROLL                      0x2F ///< Start scroll
 #define SSD1306_SET_VERTICAL_SCROLL_AREA             0xA3 ///< Set scroll range
 
+#define SH1106_SETSTARTPAGE 0xB0
+
+
 // Deprecated size stuff for backwards compatibility with old sketches
 #if defined SSD1306_128_64
  #define SSD1306_LCDWIDTH  128 ///< DEPRECATED: width w/SSD1306_128_64 defined
@@ -116,7 +119,7 @@ class Adafruit_SSD1306 : public Adafruit_GFX {
  public:
   // NEW CONSTRUCTORS -- recommended for new projects
   Adafruit_SSD1306(uint8_t w, uint8_t h, TwoWire *twi=&Wire, int8_t rst_pin=-1,
-    uint32_t clkDuring=400000UL, uint32_t clkAfter=100000UL);
+    uint32_t clkDuring=400000UL, uint32_t clkAfter=100000UL, boolean isSH1106=false);
   Adafruit_SSD1306(uint8_t w, uint8_t h, int8_t mosi_pin, int8_t sclk_pin,
     int8_t dc_pin, int8_t rst_pin, int8_t cs_pin);
   Adafruit_SSD1306(uint8_t w, uint8_t h, SPIClass *spi,
@@ -163,6 +166,7 @@ class Adafruit_SSD1306 : public Adafruit_GFX {
   uint8_t     *buffer;
   int8_t       i2caddr, vccstate, page_end;
   int8_t       mosiPin    ,  clkPin    ,  dcPin    ,  csPin, rstPin;
+  boolean      sh1106;
 #ifdef HAVE_PORTREG
   PortReg     *mosiPort   , *clkPort   , *dcPort   , *csPort;
   PortMask     mosiPinMask,  clkPinMask,  dcPinMask,  csPinMask;
@@ -177,3 +181,6 @@ class Adafruit_SSD1306 : public Adafruit_GFX {
 };
 
 #endif // _Adafruit_SSD1306_H_
+
+//Added by Sloeber 
+#pragma once

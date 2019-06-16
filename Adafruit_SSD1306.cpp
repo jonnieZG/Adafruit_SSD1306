@@ -164,10 +164,10 @@
             allocation is performed there!
 */
 Adafruit_SSD1306::Adafruit_SSD1306(uint8_t w, uint8_t h, TwoWire *twi,
-  int8_t rst_pin, uint32_t clkDuring, uint32_t clkAfter) :
+  int8_t rst_pin, uint32_t clkDuring, uint32_t clkAfter, boolean isSH1106) :
   Adafruit_GFX(w, h), spi(NULL), wire(twi ? twi : &Wire), buffer(NULL),
   mosiPin(-1), clkPin(-1), dcPin(-1), csPin(-1), rstPin(rst_pin),
-  wireClk(clkDuring), restoreClk(clkAfter) {
+  wireClk(clkDuring), restoreClk(clkAfter), sh1106(isSH1106) {
 }
 
 /*!
@@ -885,15 +885,6 @@ uint8_t *Adafruit_SSD1306::getBuffer(void) {
 */
 void Adafruit_SSD1306::display(void) {
   TRANSACTION_START
-  static const uint8_t PROGMEM dlist1[] = {
-    SSD1306_PAGEADDR,
-    0,                         // Page start address
-    0xFF,                      // Page end (not really, but works here)
-    SSD1306_COLUMNADDR,
-    0 };                       // Column start address
-  ssd1306_commandList(dlist1, sizeof(dlist1));
-  ssd1306_command1(WIDTH - 1); // Column end address
-
 #if defined(ESP8266)
   // ESP8266 needs a periodic yield() call to avoid watchdog reset.
   // With the limited size of SSD1306 displays, and the fast bitrate
@@ -903,26 +894,58 @@ void Adafruit_SSD1306::display(void) {
   // 32-byte transfer condition below.
   yield();
 #endif
-  uint16_t count = WIDTH * ((HEIGHT + 7) / 8);
   uint8_t *ptr   = buffer;
-  if(wire) { // I2C
-    wire->beginTransmission(i2caddr);
-    WIRE_WRITE((uint8_t)0x40);
-    uint8_t bytesOut = 1;
-    while(count--) {
-      if(bytesOut >= WIRE_MAX) {
-        wire->endTransmission();
-        wire->beginTransmission(i2caddr);
-        WIRE_WRITE((uint8_t)0x40);
-        bytesOut = 1;
-      }
-      WIRE_WRITE(*ptr++);
-      bytesOut++;
-    }
-    wire->endTransmission();
-  } else { // SPI
-    SSD1306_MODE_DATA
-    while(count--) SPIwrite(*ptr++);
+  if (sh1106) {
+	  for (int page = 0; page < 8; page++) {
+		  ssd1306_command(SH1106_SETSTARTPAGE + page);
+		  /* display is shifted by 2 columns on 1.3" displays */
+		  ssd1306_command(SSD1306_SETLOWCOLUMN + 2); // low column start address
+		  ssd1306_command(SSD1306_SETHIGHCOLUMN); // high column start address
+		  uint16_t count = WIDTH;
+		  wire->beginTransmission(i2caddr);
+		  WIRE_WRITE((uint8_t)0x40);
+		  uint8_t bytesOut = 1;
+		  while(count--) {
+			  if(bytesOut >= WIRE_MAX) {
+				wire->endTransmission();
+				wire->beginTransmission(i2caddr);
+				WIRE_WRITE((uint8_t)0x40);
+				bytesOut = 1;
+			  }
+			  WIRE_WRITE(*ptr++);
+			  bytesOut++;
+		  }
+		  wire->endTransmission();
+	  }
+  } else {
+	  static const uint8_t PROGMEM dlist1[] = {
+		SSD1306_PAGEADDR,
+		0,                         // Page start address
+		0xFF,                      // Page end (not really, but works here)
+		SSD1306_COLUMNADDR,
+		0 };                       // Column start address
+	  ssd1306_commandList(dlist1, sizeof(dlist1));
+	  ssd1306_command1(WIDTH - 1); // Column end address
+	  uint16_t count = WIDTH * ((HEIGHT + 7) / 8);
+	  if(wire) { // I2C
+		wire->beginTransmission(i2caddr);
+		WIRE_WRITE((uint8_t)0x40);
+		uint8_t bytesOut = 1;
+		while(count--) {
+		  if(bytesOut >= WIRE_MAX) {
+			wire->endTransmission();
+			wire->beginTransmission(i2caddr);
+			WIRE_WRITE((uint8_t)0x40);
+			bytesOut = 1;
+		  }
+		  WIRE_WRITE(*ptr++);
+		  bytesOut++;
+		}
+		wire->endTransmission();
+	  } else { // SPI
+		SSD1306_MODE_DATA
+		while(count--) SPIwrite(*ptr++);
+	  }
   }
   TRANSACTION_END
 #if defined(ESP8266)
